@@ -42,6 +42,5 @@ parameter:
 return:
     - size_t: length of frame
 */
-size_t get_Length_Frame(const uint8_t *frame)
-
+size_t get_Length_Frame(const uint8_t *frame);
 #endif // __FRAME_CRC_H__
