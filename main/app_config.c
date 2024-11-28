@@ -100,7 +100,9 @@ void ap_start(void){
 }
 
 bool wifi_in_flash(void){
-    esp_netif_create_default_wifi_sta();
+    if (esp_netif_get_handle_from_ifkey("WIFI_STA_DEF") == NULL) {
+        esp_netif_create_default_wifi_sta();
+    }
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
@@ -114,17 +116,16 @@ bool wifi_in_flash(void){
     return false;
 }
 
-void app_config(void){
+void app_config(change_wifi_t change_wifi) {
     bool state_storage = wifi_in_flash();
     
     ESP_ERROR_CHECK( esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL) );
     ESP_ERROR_CHECK( esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL) );
     ESP_ERROR_CHECK( esp_event_handler_register(SC_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL) );
     s_wifi_event_group = xEventGroupCreate();
-    if(!state_storage){
-
+    if(!state_storage || change_wifi == CHANGE_WIFI_ON){
         if (provisition_type == PROVISION_SMARTCONFIG){
-
+            printf("======= smartconfig_start =======\n");
             ESP_ERROR_CHECK(esp_wifi_start() );
             ESP_ERROR_CHECK( esp_smartconfig_set_type(SC_TYPE_ESPTOUCH) );
            
@@ -142,7 +143,30 @@ void app_config(void){
         ESP_ERROR_CHECK(esp_wifi_start());
     }
     xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT, false, true, portMAX_DELAY);
-    ESP_LOGI(TAG_SmartConfig, " ======= DONE ======= ");
+    ESP_LOGI(TAG_SmartConfig, " ======= DONE ======= ");   
+}
 
-    
+void clear_wifi_credentials(void) {
+    nvs_handle_t nvs_handle;
+    esp_err_t err = nvs_open("nvs.net80211", NVS_READWRITE, &nvs_handle);
+    if (err == ESP_OK) {
+        err = nvs_erase_key(nvs_handle, "sta.ssid");
+        if (err == ESP_OK) {
+            ESP_LOGI(TAG_SmartConfig, "SSID erased");
+        } else {
+            ESP_LOGE(TAG_SmartConfig, "Failed to erase SSID");
+        }
+
+        err = nvs_erase_key(nvs_handle, "sta.pswd");
+        if (err == ESP_OK) {
+            ESP_LOGI(TAG_SmartConfig, "Password erased");
+        } else {
+            ESP_LOGE(TAG_SmartConfig, "Failed to erase password");
+        }
+
+        nvs_commit(nvs_handle);
+        nvs_close(nvs_handle);
+    } else {
+        ESP_LOGE(TAG_SmartConfig, "Failed to open NVS handle");
+    }
 }
