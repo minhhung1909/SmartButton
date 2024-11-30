@@ -1,8 +1,10 @@
 #include "control_device.h"
+#include <time.h>
 
 static const char *TAG_CONTROL_DEVICE = "Control Device";
 
 gpio_num_t LED = GPIO_NUM_2;
+int hour, minute, second, day, month, year;
 
 void on_press(void* arg) {
     gpio_set_level(LED, 1);
@@ -44,21 +46,9 @@ int init_Button() {
     return 0;
 }
 
-
 void init_device() {
     gpio_reset_pin(LED);
     gpio_set_direction(LED, GPIO_MODE_INPUT_OUTPUT);
-}
-
-int update_time(){
-    esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
-    esp_netif_sntp_init(&config);
-
-    if (esp_netif_sntp_sync_wait(pdMS_TO_TICKS(10000)) != ESP_OK) {
-        printf("Failed to update system time within 10s timeout");
-        return -1;
-    }
-    return 0;
 }
 
 char get_time_full() {
@@ -72,97 +62,40 @@ char get_time_full() {
 
     localtime_r(&now, &timeinfo);
     strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-    ESP_LOGI(TAG_CONTROL_DEVICE, "The current date/time in HoChiMinh is: %s", strftime_buf);
+    ESP_LOGI(TAG_CONTROL_DEVICE, "The current date/time in Hanoi is: %s", strftime_buf);
     return strftime_buf;
 }
 
-int get_hour(){
-    if(update_time() < 0){
-        return -1;
-    }
+void reset_Time(){
+    hour = -1;
+    minute = -1;
+    second = -1;
+    day = -1;
+    month = -1;
+    year = -1;
+}
+
+void run_set_alarm(void *pvParameters){
+    hour = (int)(g_data[0]), minute = (int)(g_data[1]), second = (int)(g_data[2]), day = (int)(g_data[3]), month = (int)(g_data[4]), year = (int)(g_data[5]);
+    ESP_LOGI(TAG_CONTROL_DEVICE, "Set alarm at %d:%d:%d Day: %d\n", hour, minute, second, day);
     time_t now;
     struct tm timeinfo;
-    time(&now);
-    localtime_r(&now, &timeinfo);
-    return timeinfo.tm_hour;
-}
-
-int get_minute(){
-    if(update_time() < 0){
-        return -1;
+    while(1){
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        time(&now);
+        localtime_r(&now, &timeinfo);
+        if (second <= timeinfo.tm_sec &&  minute <= timeinfo.tm_min && hour == timeinfo.tm_hour && day == timeinfo.tm_mday) {
+            gpio_set_level(LED, 1);
+            reset_Time();
+            ESP_LOGI(TAG_CONTROL_DEVICE, "Alarm is running... \n");
+            break;
+        }
     }
-    time_t now;
-    struct tm timeinfo;
-    time(&now);
-    localtime_r(&now, &timeinfo);
-    return timeinfo.tm_min;
-}
-
-int get_second(){
-    if(update_time() < 0){
-        return -1;
-    }
-    time_t now;
-    struct tm timeinfo;
-    time(&now);
-    localtime_r(&now, &timeinfo);
-    return timeinfo.tm_sec;
-}
-
-int get_day(){
-    if(update_time() < 0){
-        return -1;
-    }
-    time_t now;
-    struct tm timeinfo;
-    time(&now);
-    localtime_r(&now, &timeinfo);
-    printf("Day: %d\n", timeinfo.tm_mday);
-    return timeinfo.tm_mday;
-}
-
-int get_month(){
-    if(update_time() < 0){
-        return -1;
-    }
-    time_t now;
-    struct tm timeinfo;
-    time(&now);
-    localtime_r(&now, &timeinfo);
-    printf("Month: %d\n", timeinfo.tm_mon + 1);
-    return timeinfo.tm_mon + 1;
-}
-
-int get_year() {
-    if(update_time() < 0){
-        return -1;
-    }
-    time_t now;
-    struct tm timeinfo;
-    time(&now);
-    localtime_r(&now, &timeinfo);
-    printf("Year: %d\n", timeinfo.tm_year + 1900);
-    return timeinfo.tm_year + 1900;
-}
-
-int hex_to_dec(uint8_t hex) {
-    return (hex >> 4) * 10 + (hex & 0x0F);
-}
-
-void set_time_deivce(gpio_num_t Device, int State_Device){
-    int hour = hex_to_dec(g_data[0]);
-    int minute = hex_to_dec(g_data[1]);
-    int second = hex_to_dec(g_data[2]);
-    int day = hex_to_dec(g_data[3]);
-    int month = hex_to_dec(g_data[4]);
-    int year = hex_to_dec(g_data[5]);
-
-    if (hour == get_hour() && minute == get_minute() && second >= get_second() && day == get_day() && month == get_month() && year == get_year()) {
-        gpio_set_level(Device, State_Device);
-    }
+    vTaskDelete(NULL);
 }
 
 void control_device() {
+    int old_state_led = gpio_get_level(LED);
     if ( *(unsigned int*)g_command == TURN_ON_DEVICE ) {
         gpio_set_level(LED, 1);
         printf("Turn on device\n");
@@ -174,7 +107,12 @@ void control_device() {
         ESP_LOGI(TAG_CONTROL_DEVICE, "State device: %d\n", gpio_get_level(LED));
     }
     else if ( *(unsigned int*)g_command == ALARM ) {
-        set_time_deivce(LED, ON);
-        ESP_LOGI(TAG_CONTROL_DEVICE, "Alarm...........................\n");
+        xTaskCreate(run_set_alarm, "run_set_alarm", 4096, NULL, 5, NULL);
     }
+    int new_state_led = gpio_get_level(LED);
+    // if (old_state_led != new_state_led || *(unsigned int*)g_command == ALARM) {
+    //     uint8_t data[] = {gpio_get_level(LED), 
+    //             "%d|%d|%d|%d|%d|%d", hour, minute, second, day, month, year}; // save {state device} and {time control} (vẫn chưa làm lưu thời gian)
+    //     save_device_state(data, sizeof(data));
+    // }
 }

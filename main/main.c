@@ -13,6 +13,7 @@
 
 void tcp_client_task(void *pvParameters);
 void processing_Data_Task(void *pvParameters);
+esp_err_t sync_time_global(void);
 
 static const char *TAG_MAIN = "MAIN";
 
@@ -30,25 +31,22 @@ void app_main(void){
     app_config(CHANGE_WIFI_OFF);
 
     xTaskCreate(tcp_client_task, "tcp_client", 4096, NULL, 5, NULL);
+    ESP_ERROR_CHECK(sync_time_global());
+    get_time_full();
     xTaskCreate(processing_Data_Task, "processing_Data_Task", 4096, NULL, 5, NULL);
-
-    
+    printf("===================== INIT SUCCESS =====================\n");
 
     /* END INIT */
     while(1){
 
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(500 / portTICK_PERIOD_MS);
     }
-
 }
-
-
 
 void tcp_client_task(void *pvParameters) {
     tcp_client("192.168.2.88", 2000);
     vTaskDelete(NULL);
 }
-
 
 void processing_Data_Task(void *pvParameters) {
     while(1){
@@ -59,4 +57,15 @@ void processing_Data_Task(void *pvParameters) {
         // Add delay to yield CPU
         vTaskDelay(pdMS_TO_TICKS(10));
     }
+}
+
+esp_err_t sync_time_global(void) {
+    esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
+    esp_netif_sntp_init(&config);
+    if (esp_netif_sntp_sync_wait(pdMS_TO_TICKS(60000)) != ESP_OK) {
+        ESP_LOGE(TAG_MAIN, "Failed to update system time within 60s timeout");
+        return ESP_FAIL;
+    }
+    ESP_LOGI(TAG_MAIN, "Time is synchronized.");
+    return ESP_OK;
 }
