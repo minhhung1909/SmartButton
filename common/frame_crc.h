@@ -4,11 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
-
-#define TURN_ON_DEVICE      {0x01, 0x01}
-#define TURN_OFF_DEVICE     {0x02, 0x02}
-#define GET_STATE_DEVICE    {0x03, 0x03}
+#include <stddef.h>
 
 // Funtion for build packet
 /*
@@ -43,4 +39,7 @@ return:
     - size_t: length of frame
 */
 size_t get_Length_Frame(const uint8_t *frame);
+
+
+uint8_t get_command(char rx_buffer[]);
 #endif // __FRAME_CRC_H__

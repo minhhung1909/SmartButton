@@ -7,19 +7,19 @@
 #include "esp_wifi.h"
 #include "esp_smartconfig.h"
 #include "freertos/event_groups.h"
-#include "button_gpio.h"
-#include "iot_button.h"
 #include "frame_crc.h"
+#include "app_tcp_client.h"
+#include "control_device.h"
 
-// #include "esp_eap_client.h"
-
-void on_press(void* arg);
-void init_Button();
+void tcp_client_task(void *pvParameters);
+void processing_Data_Task(void *pvParameters);
 
 static const char *TAG_MAIN = "MAIN";
 
 void app_main(void){
+    /* START INIT */
     init_Button();
+    init_device();
 
     ESP_LOGI(TAG_MAIN, "Starting app_main");
     ESP_LOGI(TAG_MAIN, "Free memory %d byte", (int)esp_get_free_heap_size());
@@ -27,39 +27,36 @@ void app_main(void){
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
-
     app_config(CHANGE_WIFI_OFF);
 
+    xTaskCreate(tcp_client_task, "tcp_client", 4096, NULL, 5, NULL);
+    xTaskCreate(processing_Data_Task, "processing_Data_Task", 4096, NULL, 5, NULL);
 
-    /* START CASE CHAGE WIFI WHEN NEED */
-    // clear_wifi_credentials();
-    // ESP_ERROR_CHECK(esp_wifi_stop());
-    // ESP_ERROR_CHECK(esp_wifi_deinit());
-    // ESP_ERROR_CHECK(nvs_flash_init());
-    // ESP_ERROR_CHECK(esp_netif_init());
-    // app_config(CHANGE_WIFI_ON);
-    /* END CASE CHAGE WIFI WHEN NEED */
+    
 
-}
+    /* END INIT */
+    while(1){
 
-
-void on_press(void* arg) {
-    printf("Button pressed!\n");
-}
-
-void init_Button() {
-    button_config_t gpio_btn_cfg = {
-        .type = BUTTON_TYPE_GPIO,
-        .long_press_time = 5000,
-        .gpio_button_config = {
-            .gpio_num = GPIO_NUM_45,
-            .active_level = 1,
-        },
-    };
-    button_handle_t gpio_btn = iot_button_create(&gpio_btn_cfg);
-    if (NULL == gpio_btn) {
-        printf("Button create failed!\n");
-        return;
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
-    iot_button_register_cb(gpio_btn, BUTTON_LONG_PRESS_START, on_press, NULL);
+
+}
+
+
+
+void tcp_client_task(void *pvParameters) {
+    tcp_client("192.168.2.88", 2000);
+    vTaskDelete(NULL);
+}
+
+
+void processing_Data_Task(void *pvParameters) {
+    while(1){
+        if (g_size_data > 0) {
+            control_device();            
+            g_size_data = 0;
+        }
+        // Add delay to yield CPU
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
 }

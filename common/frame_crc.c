@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "frame_crc.h"
+#include "command_control.h"
 
 uint16_t calculate_crc16(const uint8_t *data, size_t length) {
     uint16_t crc = 0xFFFF;
@@ -88,11 +89,11 @@ size_t get_Length_Frame(const uint8_t *frame) {
     return ++frame_length;
 }
 
-/* EXAMPLE */
-/*
+/* EXAMPLE */ 
+/* DEMO: 54 48 55 01 01 00 03 01 02 03 A0 67 2A
 int main() {
     uint8_t command[] = TURN_ON_DEVICE;
-    uint8_t data[6] = {0x01, 0x02, 0x03, 0x01, 0x02, 0x03};
+    uint8_t data[3] = {0x01, 0x02, 0x03};
     size_t frame_length = 0;
 
     uint8_t *frame = build_packet(command, data, sizeof(data), &frame_length);
