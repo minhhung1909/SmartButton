@@ -10,6 +10,7 @@
 #include "frame_crc.h"
 #include "app_tcp_client.h"
 #include "control_device.h"
+#include "app_ota.h"
 
 void tcp_client_task(void *pvParameters);
 void processing_Data_Task(void *pvParameters);
@@ -32,9 +33,12 @@ void app_main(void){
 
     xTaskCreate(tcp_client_task, "tcp_client", 4096, NULL, 5, NULL);
     ESP_ERROR_CHECK(sync_time_global());
+
     get_time_full();
     xTaskCreate(processing_Data_Task, "processing_Data_Task", 4096, NULL, 5, NULL);
     printf("===================== INIT SUCCESS =====================\n");
+
+    // xTaskCreate(app_ota_task, "app_ota_task", 4096, NULL, 5, NULL); // trigger OTA update
 
     /* END INIT */
     while(1){
