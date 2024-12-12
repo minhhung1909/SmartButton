@@ -134,7 +134,7 @@ void app_config(change_wifi_t change_wifi) {
             esp_smartconfig_stop();
         }
         else if(provisition_type == PROVISION_ACCESSPOINT){
-            ESP_LOGI(TAG_SmartConfig,"==== ap_start");
+            ESP_LOGI(TAG_SmartConfig,"======= ap_start =======\n");
             ap_start();
         }
     }else{

@@ -1,33 +1,52 @@
 #include "control_device.h"
+#include "app_config.h"
+#include "app_flash.h"
+#include "esp_netif.h"
+#include "esp_event.h"
+#include "esp_wifi.h"
+#include "nvs_flash.h"
 #include <time.h>
 
 static const char *TAG_CONTROL_DEVICE = "Control Device";
-
 gpio_num_t LED = GPIO_NUM_2;
 int hour, minute, second, day, month, year;
 
 void on_press(void* arg) {
-    gpio_set_level(LED, 1);
-    printf("Button pressed!\n");
-    /* START CASE CHAGE WIFI WHEN NEED */
-    // clear_wifi_credentials();
-    // ESP_ERROR_CHECK(esp_wifi_stop());
-    // ESP_ERROR_CHECK(esp_wifi_deinit());
-    // ESP_ERROR_CHECK(nvs_flash_init());
-    // ESP_ERROR_CHECK(esp_netif_init());
-    // app_config(CHANGE_WIFI_ON);
-    /* END CASE CHAGE WIFI WHEN NEED */
+    // None Fnc but do not delete this fnc
 }
 
-void on_release(){
-    gpio_set_level(LED, 0);
-    printf("Button released!\n");
+void two_Double(void* arg){
+    static int last_press;
+    static int cnt_flag;
+    int current_time = getTimeNow_int();
+    if((current_time - last_press) >= 2){
+        cnt_flag = 0;
+    }
+
+    cnt_flag++;
+    printf("cnt_flag: %d\n", cnt_flag);
+    ESP_LOGI(TAG_CONTROL_DEVICE, "current tick %d, last tick %d, total time wait %d", current_time, last_press, current_time - last_press);
+    if (cnt_flag == 2 && (current_time - last_press) < 2 ) {
+        gpio_set_level(LED, 1);
+        cnt_flag = 0;
+    }
+
+    last_press = current_time;
+}
+
+void reset_flash(void* arg){
+    ESP_LOGE(TAG_CONTROL_DEVICE, "=========================== DEBUG =======================");
+    clear_wifi_credentials();
+    ESP_ERROR_CHECK(esp_wifi_stop());
+    ESP_ERROR_CHECK(esp_wifi_deinit());
+    ESP_ERROR_CHECK(nvs_flash_init());
+    ESP_ERROR_CHECK(esp_netif_init());
+    app_config(CHANGE_WIFI_ON);
 }
 
 int init_Button() {
-    button_config_t gpio_btn_cfg = {
+    button_config_t gpio_btn_smartConfig_cfg = {
         .type = BUTTON_TYPE_GPIO,
-        .long_press_time = 3000,
         .short_press_time = 100,
         .gpio_button_config = {
             .gpio_num = GPIO_NUM_45,
@@ -35,14 +54,16 @@ int init_Button() {
         },
     };
 
-    button_handle_t gpio_btn = iot_button_create(&gpio_btn_cfg);
-    
-    if (NULL == gpio_btn) {
-        printf("Button create failed!\n");
+    button_handle_t gpio_btn_smartConfig = iot_button_create(&gpio_btn_smartConfig_cfg);
+
+    if (NULL == gpio_btn_smartConfig) {
+        printf("Button smart config create failed!\n");
         return -1;
     }
-    iot_button_register_cb(gpio_btn, BUTTON_LONG_PRESS_START, on_press, NULL);
-    iot_button_register_cb(gpio_btn, BUTTON_PRESS_UP, on_release, NULL);
+
+    iot_button_register_cb(gpio_btn_smartConfig, BUTTON_PRESS_DOWN, on_press, NULL); 
+    iot_button_register_cb(gpio_btn_smartConfig, BUTTON_DOUBLE_CLICK, two_Double, NULL);
+    iot_button_register_cb(gpio_btn_smartConfig, BUTTON_LONG_PRESS_HOLD, reset_flash, NULL);
     return 0;
 }
 
@@ -62,8 +83,20 @@ char get_time_full() {
 
     localtime_r(&now, &timeinfo);
     strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-    ESP_LOGI(TAG_CONTROL_DEVICE, "The current date/time in Hanoi is: %s", strftime_buf);
+    ESP_LOGI(TAG_CONTROL_DEVICE, "The current date/time in Ho Chi Minh is: %s", strftime_buf);
     return strftime_buf;
+}
+
+int getTimeNow_int() {
+    time_t now;
+    struct tm timeinfo;
+
+    time(&now);
+    setenv("TZ", "CST-7", 1);
+    tzset();
+
+    localtime_r(&now, &timeinfo);
+    return timeinfo.tm_hour * 10000 + timeinfo.tm_min * 100 + timeinfo.tm_sec;
 }
 
 void reset_Time(){

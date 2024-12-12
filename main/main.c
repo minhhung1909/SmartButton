@@ -20,6 +20,7 @@ static const char *TAG_MAIN = "MAIN";
 
 void app_main(void){
     /* START INIT */
+    
     init_Button();
     init_device();
 
@@ -31,11 +32,12 @@ void app_main(void){
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     app_config(CHANGE_WIFI_OFF);
 
-    xTaskCreate(tcp_client_task, "tcp_client", 4096, NULL, 5, NULL);
     ESP_ERROR_CHECK(sync_time_global());
-
     get_time_full();
-    xTaskCreate(processing_Data_Task, "processing_Data_Task", 4096, NULL, 5, NULL);
+
+    xTaskCreate(tcp_client_task, "Tcp Client Task", 4096, NULL, 5, NULL);
+
+    xTaskCreate(processing_Data_Task, "Processing Data Task", 4096, NULL, 5, NULL);
     printf("===================== INIT SUCCESS =====================\n");
 
     // xTaskCreate(app_ota_task, "app_ota_task", 4096, NULL, 5, NULL); // trigger OTA update
@@ -66,8 +68,8 @@ void processing_Data_Task(void *pvParameters) {
 esp_err_t sync_time_global(void) {
     esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
     esp_netif_sntp_init(&config);
-    if (esp_netif_sntp_sync_wait(pdMS_TO_TICKS(60000)) != ESP_OK) {
-        ESP_LOGE(TAG_MAIN, "Failed to update system time within 60s timeout");
+    if (esp_netif_sntp_sync_wait(pdMS_TO_TICKS(30000)) != ESP_OK) {
+        ESP_LOGE(TAG_MAIN, "Failed to update system time within 30s timeout");
         return ESP_FAIL;
     }
     ESP_LOGI(TAG_MAIN, "Time is synchronized.");
