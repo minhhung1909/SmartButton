@@ -24,18 +24,14 @@ void two_Double(void* arg){
     }
 
     cnt_flag++;
-    printf("cnt_flag: %d\n", cnt_flag);
-    ESP_LOGI(TAG_CONTROL_DEVICE, "current tick %d, last tick %d, total time wait %d", current_time, last_press, current_time - last_press);
     if (cnt_flag == 2 && (current_time - last_press) < 2 ) {
         gpio_set_level(LED, 1);
         cnt_flag = 0;
     }
-
     last_press = current_time;
 }
 
 void reset_flash(void* arg){
-    ESP_LOGE(TAG_CONTROL_DEVICE, "=========================== DEBUG =======================");
     clear_wifi_credentials();
     ESP_ERROR_CHECK(esp_wifi_stop());
     ESP_ERROR_CHECK(esp_wifi_deinit());
