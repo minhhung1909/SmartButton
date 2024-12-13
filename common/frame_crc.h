@@ -12,11 +12,10 @@ parameter:
     - uint8_t command: command to send
     - uint8_t data: data to send
     - size_t data_length: length of data ( sizeof(data) )
-    - frame_length: length of frame
 return:
     - uint8_t *: frame
 */
-uint8_t *build_packet(const uint8_t *command, const uint8_t *data, size_t data_length, size_t *frame_length);
+uint8_t *build_packet(uint8_t command[2], const uint8_t *data, size_t data_length);
 
 
 

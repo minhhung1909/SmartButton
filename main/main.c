@@ -50,7 +50,7 @@ void app_main(void){
 }
 
 void tcp_client_task(void *pvParameters) {
-    tcp_client("192.168.2.88", 2000);
+    tcp_client("192.168.137.1", 2000);
     vTaskDelete(NULL);
 }
 

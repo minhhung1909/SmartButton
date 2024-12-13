@@ -11,6 +11,42 @@ static const char *TAG_CONTROL_DEVICE = "Control Device";
 gpio_num_t LED = GPIO_NUM_2;
 int hour, minute, second, day, month, year;
 
+char get_time_full() {
+    time_t now;
+    char strftime_buf[64];
+    struct tm timeinfo;
+
+    time(&now);
+    setenv("TZ", "CST-7", 1);
+    tzset();
+
+    localtime_r(&now, &timeinfo);
+    strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+    ESP_LOGI(TAG_CONTROL_DEVICE, "The current date/time in Ho Chi Minh is: %s", strftime_buf);
+    return strftime_buf;
+}
+
+int getTimeNow_int() {
+    time_t now;
+    struct tm timeinfo;
+
+    time(&now);
+    setenv("TZ", "CST-7", 1);
+    tzset();
+
+    localtime_r(&now, &timeinfo);
+    return timeinfo.tm_hour * 10000 + timeinfo.tm_min * 100 + timeinfo.tm_sec;
+}
+
+void reset_Time(){
+    hour = -1;
+    minute = -1;
+    second = -1;
+    day = -1;
+    month = -1;
+    year = -1;
+}
+
 void on_press(void* arg) {
     // None Fnc but do not delete this fnc
 }
@@ -66,42 +102,6 @@ int init_Button() {
 void init_device() {
     gpio_reset_pin(LED);
     gpio_set_direction(LED, GPIO_MODE_INPUT_OUTPUT);
-}
-
-char get_time_full() {
-    time_t now;
-    char strftime_buf[64];
-    struct tm timeinfo;
-
-    time(&now);
-    setenv("TZ", "CST-7", 1);
-    tzset();
-
-    localtime_r(&now, &timeinfo);
-    strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-    ESP_LOGI(TAG_CONTROL_DEVICE, "The current date/time in Ho Chi Minh is: %s", strftime_buf);
-    return strftime_buf;
-}
-
-int getTimeNow_int() {
-    time_t now;
-    struct tm timeinfo;
-
-    time(&now);
-    setenv("TZ", "CST-7", 1);
-    tzset();
-
-    localtime_r(&now, &timeinfo);
-    return timeinfo.tm_hour * 10000 + timeinfo.tm_min * 100 + timeinfo.tm_sec;
-}
-
-void reset_Time(){
-    hour = -1;
-    minute = -1;
-    second = -1;
-    day = -1;
-    month = -1;
-    year = -1;
 }
 
 void run_set_alarm(void *pvParameters){

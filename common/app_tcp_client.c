@@ -8,12 +8,12 @@
 #include "esp_log.h"
 #include "app_tcp_client.h"
 #include "frame_crc.h"
+#include "command_control.h"
 
-static const char *TAG_TCP = "tcp ";
-static const char *payload = " Message from ESP32 connect OK";
-
-static const char *payload_OK = "DATA OK";
-static const char *payload_ERROR = "DATA ERROR";
+static const char *TAG_TCP = "TCP_CLIENT ";
+static const uint8_t payload_connectOK[] =  " Message from ESP32 connect OK";
+static const uint8_t payload_OK[] =         "DATA OK";
+static const uint8_t payload_ERROR[] =      "DATA ERROR";
 
 uint8_t g_command[2] = {'x','x'};
 uint8_t g_data_length[2] = {0}; 
@@ -46,8 +46,7 @@ void tcp_client(char host_ip[], int port) {
             break;
         }
         ESP_LOGI(TAG_TCP, "Successfully connected");
-        
-        err = send(sock, payload, strlen(payload), 0); 
+        err = send(sock, build_packet(FEED_BACK_CMD, payload_connectOK, sizeof(payload_connectOK)), sizeof(payload_connectOK) + 10, 0);
         if (err < 0) {
             ESP_LOGE(TAG_TCP, "Error occurred during sending: errno %d", errno);
             break;
@@ -65,7 +64,7 @@ void tcp_client(char host_ip[], int port) {
                     ESP_LOGI(TAG_TCP, "Received %d bytes from %s:", len, host_ip);
                     ESP_LOGI(TAG_TCP, "%s", rx_buffer);
 
-                    err = send(sock, payload_OK, strlen(payload_OK), 0);
+                    err = send(sock, build_packet(FEED_BACK_CMD, payload_OK, sizeof(payload_OK)), sizeof(payload_OK) + 10, 0);
                     if (err < 0) {
                         ESP_LOGE(TAG_TCP, "Error occurred during sending: errno %d", errno);
                         break;
@@ -79,7 +78,7 @@ void tcp_client(char host_ip[], int port) {
                                 
                 }else{
                     ESP_LOGE(TAG_TCP, "CRC check failed.");
-                    err = send(sock, payload_ERROR, strlen(payload_ERROR), 0);
+                    err = send(sock, build_packet(FEED_BACK_CMD, payload_ERROR, sizeof(payload_ERROR)), sizeof(payload_ERROR) + 10, 0);
                     if (err < 0) {
                         ESP_LOGE(TAG_TCP, "Error occurred during sending: errno %d", errno);
                         break;
